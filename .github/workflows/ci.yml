@@ -23,7 +23,8 @@ jobs:
       - run: vendor/bin/phpunit
 
   integration:
-    runs-on: ubuntu-latest
+    # ponytail: xberg's prebuilt .so needs libheif >= 1.19; 24.04 ships 1.17
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
 
@@ -33,7 +34,7 @@ jobs:
           tools: pie
           coverage: none
 
-      - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
+      - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libheif1
 
       - run: sudo pie install "xberg-io/xberg:^1.0.0-rc.29" || true
 
