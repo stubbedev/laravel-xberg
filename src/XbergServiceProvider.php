@@ -43,6 +43,22 @@ class XbergServiceProvider extends ServiceProvider
         ], 'xberg-config');
 
         $this->registerPlugins();
+        $this->registerAboutCommand();
+    }
+
+    private function registerAboutCommand(): void
+    {
+        if (!class_exists(\Illuminate\Foundation\Console\AboutCommand::class)) {
+            return;
+        }
+
+        \Illuminate\Foundation\Console\AboutCommand::add('Xberg', fn () => [
+            'Extension' => extension_loaded('xberg') ? phpversion('xberg') ?: 'loaded' : '<fg=red>not installed</>',
+            'OCR' => config('xberg.ocr.enabled')
+                ? config('xberg.ocr.backend').' ('.config('xberg.ocr.language').')'
+                : 'disabled',
+            'Plugins' => (string) collect(config('xberg.plugins', []))->flatten()->count(),
+        ]);
     }
 
     private function registerPlugins(): void
@@ -52,6 +68,13 @@ class XbergServiceProvider extends ServiceProvider
         }
 
         $plugins = config('xberg.plugins', []);
+
+        if (!extension_loaded('xberg') && collect($plugins)->flatten()->isNotEmpty()) {
+            throw new \RuntimeException(
+                'config/xberg.php lists plugins, but the xberg extension is not '.
+                'installed. Install it with "pie install xberg-io/xberg".'
+            );
+        }
 
         foreach (self::PLUGIN_TYPES as $key => $method) {
             foreach ($plugins[$key] ?? [] as $class) {

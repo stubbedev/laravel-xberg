@@ -23,12 +23,26 @@ class XbergManager
     {
     }
 
+    // ponytail: without this, a missing extension surfaces as
+    // "Class \Xberg\ExtractInput not found" deep in a request.
+    private function assertExtensionLoaded(): void
+    {
+        if (!extension_loaded('xberg')) {
+            throw new \RuntimeException(
+                'The xberg extension is not installed. Install it with '.
+                '"pie install xberg-io/xberg", or use Xberg::fake() in tests.'
+            );
+        }
+    }
+
     /**
      * Extract a single document. Accepts a path/URL string, an SplFileInfo
      * (including Laravel UploadedFile), or a prepared ExtractInput.
      */
     public function extract(ExtractInput|string|SplFileInfo $input, ?ExtractionConfig $config = null): ExtractionResult
     {
+        $this->assertExtensionLoaded();
+
         return XbergCore::extract($this->normalize($input), $config ?? $this->defaultConfig());
     }
 
@@ -45,6 +59,8 @@ class XbergManager
      */
     public function extractBatch(array $inputs, ?ExtractionConfig $config = null): ExtractionResult
     {
+        $this->assertExtensionLoaded();
+
         $inputs = array_map($this->normalize(...), $inputs);
 
         return XbergCore::extractBatch($inputs, $config ?? $this->defaultConfig());
@@ -55,6 +71,8 @@ class XbergManager
      */
     public function defaultConfig(): ExtractionConfig
     {
+        $this->assertExtensionLoaded();
+
         $ocr = $this->config['ocr'] ?? [];
 
         return new ExtractionConfig(
@@ -92,6 +110,8 @@ class XbergManager
 
     public function __call(string $method, array $arguments): mixed
     {
+        $this->assertExtensionLoaded();
+
         return XbergCore::$method(...$arguments);
     }
 }

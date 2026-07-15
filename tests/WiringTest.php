@@ -30,4 +30,16 @@ class WiringTest extends TestCase
         $this->assertSame($this->app->make('xberg'), $this->app->make(XbergManager::class));
         $this->assertInstanceOf(XbergManager::class, Xberg::getFacadeRoot());
     }
+
+    public function test_missing_extension_gives_actionable_error(): void
+    {
+        if (extension_loaded('xberg')) {
+            $this->markTestSkipped('xberg extension installed');
+        }
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('pie install xberg-io/xberg');
+
+        Xberg::extract('document.pdf');
+    }
 }
