@@ -35,7 +35,7 @@ jobs:
 
       - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
 
-      - run: sudo pie install xberg-io/xberg
+      - run: sudo pie install "xberg-io/xberg:^1.0.0-rc.29"
 
       - run: php -m | grep -i xberg
 
