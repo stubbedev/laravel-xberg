@@ -12,6 +12,7 @@ use Stubbedev\Xberg\XbergManager;
  * @method static \Xberg\ExtractionResult extract(\Xberg\ExtractInput|string|\SplFileInfo $input, ?\Xberg\ExtractionConfig $config = null)
  * @method static string text(\Xberg\ExtractInput|string|\SplFileInfo $input, ?\Xberg\ExtractionConfig $config = null)
  * @method static \Xberg\ExtractionResult extractBatch(array $inputs, ?\Xberg\ExtractionConfig $config = null)
+ * @method static \Xberg\ExtractionConfig config(array $overrides = [])
  * @method static \Xberg\ExtractionConfig defaultConfig()
  * @method static array listSupportedFormats()
  * @method static array listOcrBackends()

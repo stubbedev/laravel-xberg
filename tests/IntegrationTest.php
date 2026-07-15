@@ -43,9 +43,18 @@ class IntegrationTest extends TestCase
         unlink($path);
     }
 
-    public function test_default_config_builds_and_backends_list(): void
+    public function test_config_builds_from_laravel_config(): void
     {
-        $this->assertNotNull(Xberg::defaultConfig());
+        $config = Xberg::config(['ocr' => ['language' => 'eng+deu'], 'extract_images' => true]);
+
+        $this->assertSame(['eng', 'deu'], $config->ocr->language);
+        $this->assertSame('tesseract', $config->ocr->backend);
+        $this->assertTrue($config->pdfOptions->extractImages);
+        $this->assertNotNull($config->images);
+    }
+
+    public function test_backends_list(): void
+    {
         $this->assertContains('tesseract', Xberg::listOcrBackends());
     }
 }

@@ -26,10 +26,18 @@ The service provider and `Xberg` facade alias are auto-discovered.
 
 ```dotenv
 XBERG_OCR_ENABLED=true
-XBERG_OCR_BACKEND=tesseract   # tesseract | paddleocr | candle | custom
+XBERG_OCR_BACKEND=tesseract   # tesseract | paddleocr | vlm | custom
 XBERG_OCR_LANGUAGE=eng        # or e.g. "eng+fra+deu"
+XBERG_OCR_AUTO_ROTATE=true
 XBERG_EXTRACT_TABLES=true
 XBERG_EXTRACT_IMAGES=false
+
+# VLM provider — for XBERG_OCR_BACKEND=vlm or the low-quality fallback
+XBERG_LLM_MODEL=              # e.g. openai/gpt-4o-mini, ollama/llama3.2
+XBERG_LLM_API_KEY=            # optional; falls back to OPENAI_API_KEY etc.
+XBERG_LLM_BASE_URL=           # optional; for self-hosted ollama/vllm/...
+XBERG_OCR_VLM_FALLBACK=disabled          # or on_low_quality
+XBERG_OCR_VLM_QUALITY_THRESHOLD=0.5
 ```
 
 ## Usage
@@ -80,14 +88,34 @@ Xberg::extract(ExtractInput::fromBytes($bytes, 'application/pdf', 'report.pdf'))
 
 ### Per-call config override
 
-```php
-use Xberg\ExtractionConfig;
-use Xberg\OcrConfig;
+`Xberg::config()` builds a native `ExtractionConfig` from `config/xberg.php`; pass overrides with the same array shape:
 
-$output = Xberg::extract('scan.png', new ExtractionConfig(
-    ocr: new OcrConfig(backend: 'paddleocr', language: 'eng+deu'),
-    extractTables: true,
-));
+```php
+$output = Xberg::extract('scan.png', Xberg::config([
+    'ocr' => ['backend' => 'paddleocr', 'language' => 'eng+deu'],
+    'extract_images' => true,
+]));
+```
+
+Everything not covered by the array keeps the extension's own defaults, so a hand-built `\Xberg\ExtractionConfig` still works anywhere a config is accepted.
+
+### VLM providers
+
+Set `XBERG_LLM_MODEL` and either use the VLM as the OCR backend or as a quality fallback behind tesseract:
+
+```dotenv
+# Highest accuracy, slow, per-token cost:
+XBERG_OCR_BACKEND=vlm
+XBERG_LLM_MODEL=openai/gpt-4o-mini
+
+# Or: tesseract first, VLM only for pages below the quality threshold:
+XBERG_OCR_BACKEND=tesseract
+XBERG_OCR_VLM_FALLBACK=on_low_quality
+XBERG_LLM_MODEL=anthropic/claude-sonnet-4-20250514
+
+# Self-hosted, no API key:
+XBERG_LLM_MODEL=ollama/llama3.2
+XBERG_LLM_BASE_URL=http://localhost:11434/v1
 ```
 
 ### Everything else on `\Xberg\Xberg`

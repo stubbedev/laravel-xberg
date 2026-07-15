@@ -29,6 +29,34 @@ return [
         'enabled' => env('XBERG_OCR_ENABLED', true),
         'backend' => env('XBERG_OCR_BACKEND', 'tesseract'),
         'language' => env('XBERG_OCR_LANGUAGE', 'eng'),
+        'auto_rotate' => env('XBERG_OCR_AUTO_ROTATE', true),
+
+        // 'disabled' or 'on_low_quality' — retry pages with the VLM below
+        // (requires llm.model) when classical OCR quality drops under the
+        // threshold.
+        'vlm_fallback' => env('XBERG_OCR_VLM_FALLBACK', 'disabled'),
+        'vlm_quality_threshold' => env('XBERG_OCR_VLM_QUALITY_THRESHOLD', 0.5),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | LLM / VLM provider
+    |--------------------------------------------------------------------------
+    |
+    | Used when ocr.backend is "vlm" or ocr.vlm_fallback is enabled.
+    | model uses liter-llm routing: "openai/gpt-4o-mini",
+    | "anthropic/claude-sonnet-4-20250514", "ollama/llama3.2", ...
+    | api_key may be null — xberg falls back to the provider's standard
+    | env var (OPENAI_API_KEY, ANTHROPIC_API_KEY, ...).
+    | base_url overrides the endpoint for self-hosted engines
+    | (ollama/lmstudio/vllm/llamacpp).
+    |
+    */
+
+    'llm' => [
+        'model' => env('XBERG_LLM_MODEL'),
+        'api_key' => env('XBERG_LLM_API_KEY'),
+        'base_url' => env('XBERG_LLM_BASE_URL'),
     ],
 
     /*

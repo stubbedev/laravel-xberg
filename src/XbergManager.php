@@ -8,7 +8,11 @@ use SplFileInfo;
 use Xberg\ExtractInput;
 use Xberg\ExtractionConfig;
 use Xberg\ExtractionResult;
+use Xberg\ImageExtractionConfig;
+use Xberg\LlmConfig;
 use Xberg\OcrConfig;
+use Xberg\PdfConfig;
+use Xberg\VlmFallbackPolicy;
 use Xberg\Xberg as XbergCore;
 
 /**
@@ -43,7 +47,7 @@ class XbergManager
     {
         $this->assertExtensionLoaded();
 
-        return XbergCore::extract($this->normalize($input), $config ?? $this->defaultConfig());
+        return XbergCore::extract($this->normalize($input), $config ?? $this->config());
     }
 
     /**
@@ -63,28 +67,92 @@ class XbergManager
 
         $inputs = array_map($this->normalize(...), $inputs);
 
-        return XbergCore::extractBatch($inputs, $config ?? $this->defaultConfig());
+        return XbergCore::extractBatch($inputs, $config ?? $this->config());
     }
 
     /**
-     * The ExtractionConfig built from config/xberg.php.
+     * Build an ExtractionConfig from config/xberg.php, optionally overridden
+     * per call with the same array shape:
+     *
+     *     Xberg::extract($doc, Xberg::config(['ocr' => ['backend' => 'vlm']]));
+     *
+     * Unspecified native options keep the values from the extension's own
+     * ExtractionConfig::default(), so new xberg options never break this.
      */
-    public function defaultConfig(): ExtractionConfig
+    public function config(array $overrides = []): ExtractionConfig
     {
         $this->assertExtensionLoaded();
 
-        $ocr = $this->config['ocr'] ?? [];
+        $cfg = array_replace_recursive($this->config, $overrides);
 
-        return new ExtractionConfig(
-            ocr: ($ocr['enabled'] ?? false)
-                ? new OcrConfig(
-                    backend: $ocr['backend'] ?? 'tesseract',
-                    language: $ocr['language'] ?? 'eng',
-                )
-                : null,
-            extractTables: (bool) ($this->config['extract_tables'] ?? true),
-            extractImages: (bool) ($this->config['extract_images'] ?? false),
+        return new ExtractionConfig(...[
+            ...get_object_vars(ExtractionConfig::default()),
+            'ocr' => $this->ocrConfig($cfg['ocr'] ?? []),
+            'pdfOptions' => $this->pdfConfig($cfg),
+            'images' => ($cfg['extract_images'] ?? false) ? ImageExtractionConfig::default() : null,
+        ]);
+    }
+
+    /**
+     * @deprecated use config()
+     */
+    public function defaultConfig(): ExtractionConfig
+    {
+        return $this->config();
+    }
+
+    private function ocrConfig(array $ocr): OcrConfig
+    {
+        $language = $ocr['language'] ?? 'eng';
+
+        $vars = [
+            ...get_object_vars(OcrConfig::default()),
+            'enabled' => (bool) ($ocr['enabled'] ?? true),
+            'backend' => $ocr['backend'] ?? 'tesseract',
+            'language' => is_array($language) ? $language : explode('+', $language),
+        ];
+
+        if (isset($ocr['auto_rotate'])) {
+            $vars['autoRotate'] = (bool) $ocr['auto_rotate'];
+        }
+
+        // ponytail: only the on_low_quality policy is constructible from the
+        // stubs; add 'always' when the extension exposes a factory for it.
+        if (($ocr['vlm_fallback'] ?? 'disabled') === 'on_low_quality') {
+            $vars['vlmFallback'] = VlmFallbackPolicy::onLowQuality(
+                (float) ($ocr['vlm_quality_threshold'] ?? 0.5)
+            );
+        }
+
+        if ($llm = $this->llmConfig()) {
+            $vars['vlmConfig'] = $llm;
+        }
+
+        return new OcrConfig(...$vars);
+    }
+
+    private function llmConfig(): ?LlmConfig
+    {
+        $llm = $this->config['llm'] ?? [];
+
+        if (empty($llm['model'])) {
+            return null;
+        }
+
+        return new LlmConfig(
+            model: $llm['model'],
+            apiKey: $llm['api_key'] ?? null,
+            baseUrl: $llm['base_url'] ?? null,
         );
+    }
+
+    private function pdfConfig(array $cfg): PdfConfig
+    {
+        return new PdfConfig(...[
+            ...get_object_vars(PdfConfig::default()),
+            'extractTables' => (bool) ($cfg['extract_tables'] ?? true),
+            'extractImages' => (bool) ($cfg['extract_images'] ?? false),
+        ]);
     }
 
     protected function normalize(ExtractInput|string|SplFileInfo $input): ExtractInput
