@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Stubbedev\Xberg;
 
+use SplFileInfo;
 use Xberg\ExtractInput;
 use Xberg\ExtractionConfig;
 use Xberg\ExtractionResult;
@@ -23,26 +24,28 @@ class XbergManager
     }
 
     /**
-     * Extract a single document. Strings are treated as a path/URI.
+     * Extract a single document. Accepts a path/URL string, an SplFileInfo
+     * (including Laravel UploadedFile), or a prepared ExtractInput.
      */
-    public function extract(ExtractInput|string $input, ?ExtractionConfig $config = null): ExtractionResult
+    public function extract(ExtractInput|string|SplFileInfo $input, ?ExtractionConfig $config = null): ExtractionResult
     {
-        if (is_string($input)) {
-            $input = ExtractInput::fromUri($input);
-        }
-
-        return XbergCore::extract($input, $config ?? $this->defaultConfig());
+        return XbergCore::extract($this->normalize($input), $config ?? $this->defaultConfig());
     }
 
     /**
-     * @param array<ExtractInput|string> $inputs
+     * Extract a single document and return just its text content.
+     */
+    public function text(ExtractInput|string|SplFileInfo $input, ?ExtractionConfig $config = null): string
+    {
+        return $this->extract($input, $config)->results[0]->content;
+    }
+
+    /**
+     * @param array<ExtractInput|string|SplFileInfo> $inputs
      */
     public function extractBatch(array $inputs, ?ExtractionConfig $config = null): ExtractionResult
     {
-        $inputs = array_map(
-            fn (ExtractInput|string $i) => is_string($i) ? ExtractInput::fromUri($i) : $i,
-            $inputs
-        );
+        $inputs = array_map($this->normalize(...), $inputs);
 
         return XbergCore::extractBatch($inputs, $config ?? $this->defaultConfig());
     }
@@ -64,6 +67,27 @@ class XbergManager
             extractTables: (bool) ($this->config['extract_tables'] ?? true),
             extractImages: (bool) ($this->config['extract_images'] ?? false),
         );
+    }
+
+    protected function normalize(ExtractInput|string|SplFileInfo $input): ExtractInput
+    {
+        if ($input instanceof \Illuminate\Http\UploadedFile) {
+            return ExtractInput::fromBytes(
+                $input->getContent(),
+                $input->getMimeType() ?? 'application/octet-stream',
+                $input->getClientOriginalName(),
+            );
+        }
+
+        if ($input instanceof SplFileInfo) {
+            return ExtractInput::fromUri($input->getPathname());
+        }
+
+        if (is_string($input)) {
+            return ExtractInput::fromUri($input);
+        }
+
+        return $input;
     }
 
     public function __call(string $method, array $arguments): mixed

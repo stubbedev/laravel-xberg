@@ -39,7 +39,10 @@ XBERG_EXTRACT_IMAGES=false
 ```php
 use Stubbedev\Xberg\Facades\Xberg;
 
-// Path or URL — uses the config defaults (tesseract etc.)
+// Just the text — one call
+$text = Xberg::text('document.pdf');
+
+// Full result — path or URL, uses the config defaults (tesseract etc.)
 $output = Xberg::extract('document.pdf');
 $result = $output->results[0];
 
@@ -58,21 +61,21 @@ $output = Xberg::extractBatch(['a.pdf', 'b.docx', 'scan.png']);
 
 ### Uploaded files / raw bytes
 
+Uploaded files (and any `SplFileInfo`) are accepted directly:
+
+```php
+public function store(Request $request)
+{
+    return ['text' => Xberg::text($request->file('document'))];
+}
+```
+
+For raw bytes, build the input yourself:
+
 ```php
 use Xberg\ExtractInput;
 
-public function store(Request $request)
-{
-    $file = $request->file('document');
-
-    $output = Xberg::extract(ExtractInput::fromBytes(
-        $file->getContent(),
-        $file->getMimeType(),
-        $file->getClientOriginalName(),
-    ));
-
-    return ['text' => $output->results[0]->content];
-}
+Xberg::extract(ExtractInput::fromBytes($bytes, 'application/pdf', 'report.pdf'));
 ```
 
 ### Per-call config override
@@ -96,6 +99,26 @@ Xberg::listSupportedFormats();
 Xberg::listOcrBackends();       // ['tesseract', 'paddleocr', ...]
 Xberg::mapUrl('https://example.com/docs', $urlConfig);
 ```
+
+## Testing your app
+
+`Xberg::fake()` swaps in a test double — no native extension needed:
+
+```php
+use Stubbedev\Xberg\Facades\Xberg;
+
+public function test_document_upload_extracts_text(): void
+{
+    $fake = Xberg::fake()->stub('*.pdf', 'Invoice #42 total 100 EUR');
+
+    $this->post('/documents', ['document' => UploadedFile::fake()->create('invoice.pdf')])
+        ->assertOk();
+
+    $fake->assertExtracted('invoice.pdf');
+}
+```
+
+Unstubbed inputs return `"Fake extracted content"`. `assertNothingExtracted()` is there too; registry methods (`list*`, `register*`, ...) become no-ops.
 
 ## Plugins
 

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Stubbedev\Xberg\Facades;
 
 use Illuminate\Support\Facades\Facade;
+use Stubbedev\Xberg\XbergFake;
 use Stubbedev\Xberg\XbergManager;
 
 /**
- * @method static \Xberg\ExtractionResult extract(\Xberg\ExtractInput|string $input, ?\Xberg\ExtractionConfig $config = null)
+ * @method static \Xberg\ExtractionResult extract(\Xberg\ExtractInput|string|\SplFileInfo $input, ?\Xberg\ExtractionConfig $config = null)
+ * @method static string text(\Xberg\ExtractInput|string|\SplFileInfo $input, ?\Xberg\ExtractionConfig $config = null)
  * @method static \Xberg\ExtractionResult extractBatch(array $inputs, ?\Xberg\ExtractionConfig $config = null)
  * @method static \Xberg\ExtractionConfig defaultConfig()
  * @method static array listSupportedFormats()
@@ -41,6 +43,16 @@ use Stubbedev\Xberg\XbergManager;
  */
 class Xberg extends Facade
 {
+    /**
+     * Replace the bound manager with a fake for testing.
+     */
+    public static function fake(): XbergFake
+    {
+        static::swap($fake = new XbergFake());
+
+        return $fake;
+    }
+
     protected static function getFacadeAccessor(): string
     {
         return XbergManager::class;
