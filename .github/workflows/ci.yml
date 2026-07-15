@@ -21,3 +21,24 @@ jobs:
       - run: composer install --ignore-platform-req=ext-xberg --no-interaction --no-progress
 
       - run: vendor/bin/phpunit
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: pie
+          coverage: none
+
+      - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
+
+      - run: sudo pie install xberg-io/xberg
+
+      - run: php -m | grep -i xberg
+
+      - run: composer install --no-interaction --no-progress
+
+      - run: vendor/bin/phpunit
