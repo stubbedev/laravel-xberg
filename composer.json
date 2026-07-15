@@ -1,0 +1,45 @@
+{
+    "name": "kontainer/laravel-xberg",
+    "description": "Laravel wrapper for xberg-io/xberg document extraction (OCR, tables, plugins)",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Alexander Bugge Stage",
+            "email": "abs@kontainer.com"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "ext-xberg": "*",
+        "illuminate/support": "^10.0 || ^11.0 || ^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Kontainer\\Xberg\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Kontainer\\Xberg\\XbergServiceProvider"
+            ],
+            "aliases": {
+                "Xberg": "Kontainer\\Xberg\\Facades\\Xberg"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require-dev": {
+        "orchestra/testbench": "*"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kontainer\\Xberg\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}
