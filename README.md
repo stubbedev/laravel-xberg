@@ -14,7 +14,7 @@ xberg is a native PHP extension (composer type `php-ext`), installed with [PIE](
 
 ```bash
 pie install xberg-io/xberg
-composer require kontainer/laravel-xberg
+composer require stubbedev/laravel-xberg
 php artisan vendor:publish --tag=xberg-config
 ```
 
@@ -37,7 +37,7 @@ XBERG_EXTRACT_IMAGES=false
 ### Extracting
 
 ```php
-use Kontainer\Xberg\Facades\Xberg;
+use Stubbedev\Xberg\Facades\Xberg;
 
 // Path or URL — uses the config defaults (tesseract etc.)
 $output = Xberg::extract('document.pdf');

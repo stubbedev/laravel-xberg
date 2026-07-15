@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Kontainer\Xberg\Facades;
+namespace Stubbedev\Xberg\Facades;
 
 use Illuminate\Support\Facades\Facade;
-use Kontainer\Xberg\XbergManager;
+use Stubbedev\Xberg\XbergManager;
 
 /**
  * @method static \Xberg\ExtractionResult extract(\Xberg\ExtractInput|string $input, ?\Xberg\ExtractionConfig $config = null)

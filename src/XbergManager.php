@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Kontainer\Xberg;
+namespace Stubbedev\Xberg;
 
 use Xberg\ExtractInput;
 use Xberg\ExtractionConfig;

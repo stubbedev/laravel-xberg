@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Kontainer\Xberg;
+namespace Stubbedev\Xberg;
 
 use Illuminate\Support\ServiceProvider;
 use Xberg\Xberg as XbergCore;

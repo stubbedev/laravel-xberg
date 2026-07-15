@@ -1,5 +1,5 @@
 {
-    "name": "kontainer/laravel-xberg",
+    "name": "stubbedev/laravel-xberg",
     "description": "Laravel wrapper for xberg-io/xberg document extraction (OCR, tables, plugins)",
     "license": "MIT",
     "type": "library",
@@ -16,16 +16,16 @@
     },
     "autoload": {
         "psr-4": {
-            "Kontainer\\Xberg\\": "src/"
+            "Stubbedev\\Xberg\\": "src/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Kontainer\\Xberg\\XbergServiceProvider"
+                "Stubbedev\\Xberg\\XbergServiceProvider"
             ],
             "aliases": {
-                "Xberg": "Kontainer\\Xberg\\Facades\\Xberg"
+                "Xberg": "Stubbedev\\Xberg\\Facades\\Xberg"
             }
         }
     },
@@ -36,7 +36,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Kontainer\\Xberg\\Tests\\": "tests/"
+            "Stubbedev\\Xberg\\Tests\\": "tests/"
         }
     },
     "scripts": {

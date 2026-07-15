@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Kontainer\Xberg\Tests;
+namespace Stubbedev\Xberg\Tests;
 
-use Kontainer\Xberg\Facades\Xberg;
-use Kontainer\Xberg\XbergManager;
-use Kontainer\Xberg\XbergServiceProvider;
+use Stubbedev\Xberg\Facades\Xberg;
+use Stubbedev\Xberg\XbergManager;
+use Stubbedev\Xberg\XbergServiceProvider;
 use Orchestra\Testbench\TestCase;
 
 // ponytail: wiring only — extract()/plugin registration need the native
