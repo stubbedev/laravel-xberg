@@ -8,18 +8,13 @@ use SplFileInfo;
 use Xberg\ExtractInput;
 use Xberg\ExtractionConfig;
 use Xberg\ExtractionResult;
-use Xberg\ImageExtractionConfig;
-use Xberg\LlmConfig;
-use Xberg\OcrConfig;
-use Xberg\PdfConfig;
-use Xberg\VlmFallbackPolicy;
-use Xberg\Xberg as XbergCore;
+use Xberg\XbergApi;
 
 /**
- * Thin wrapper around \Xberg\Xberg that applies config/xberg.php defaults.
+ * Thin wrapper around \Xberg\XbergApi that applies config/xberg.php defaults.
  *
  * Any method not defined here (list*, register*, unregister*, clear*,
- * mapUrl, ...) is forwarded verbatim to \Xberg\Xberg via __call.
+ * mapUrl, ...) is forwarded verbatim to \Xberg\XbergApi via __call.
  */
 class XbergManager
 {
@@ -47,7 +42,7 @@ class XbergManager
     {
         $this->assertExtensionLoaded();
 
-        return XbergCore::extract($this->normalize($input), $config ?? $this->config());
+        return XbergApi::extract($this->normalize($input), $config ?? $this->config());
     }
 
     /**
@@ -55,7 +50,7 @@ class XbergManager
      */
     public function text(ExtractInput|string|SplFileInfo $input, ?ExtractionConfig $config = null): string
     {
-        return $this->extract($input, $config)->results[0]->content;
+        return $this->extract($input, $config)->getResults()[0]->content;
     }
 
     /**
@@ -67,7 +62,7 @@ class XbergManager
 
         $inputs = array_map($this->normalize(...), $inputs);
 
-        return XbergCore::extractBatch($inputs, $config ?? $this->config());
+        return XbergApi::extractBatch($inputs, $config ?? $this->config());
     }
 
     /**
@@ -76,8 +71,10 @@ class XbergManager
      *
      *     Xberg::extract($doc, Xberg::config(['ocr' => ['backend' => 'vlm']]));
      *
-     * Unspecified native options keep the values from the extension's own
-     * ExtractionConfig::default(), so new xberg options never break this.
+     * Built via ExtractionConfig::from_json, so everything not covered here
+     * keeps the extension's own defaults. Use the 'native' key to pass any
+     * other option in xberg's own (snake_case) schema, e.g.
+     * ['native' => ['chunking' => ['max_characters' => 2000]]].
      */
     public function config(array $overrides = []): ExtractionConfig
     {
@@ -85,12 +82,7 @@ class XbergManager
 
         $cfg = array_replace_recursive($this->config, $overrides);
 
-        return new ExtractionConfig(...[
-            ...get_object_vars(ExtractionConfig::default()),
-            'ocr' => $this->ocrConfig($cfg['ocr'] ?? []),
-            'pdfOptions' => $this->pdfConfig($cfg),
-            'images' => ($cfg['extract_images'] ?? false) ? ImageExtractionConfig::default() : null,
-        ]);
+        return ExtractionConfig::from_json(json_encode($this->toNative($cfg), JSON_THROW_ON_ERROR));
     }
 
     /**
@@ -101,58 +93,48 @@ class XbergManager
         return $this->config();
     }
 
-    private function ocrConfig(array $ocr): OcrConfig
+    /**
+     * Map the Laravel config shape onto xberg's native config schema.
+     */
+    private function toNative(array $cfg): array
     {
+        $ocr = $cfg['ocr'] ?? [];
         $language = $ocr['language'] ?? 'eng';
 
-        $vars = [
-            ...get_object_vars(OcrConfig::default()),
-            'enabled' => (bool) ($ocr['enabled'] ?? true),
-            'backend' => $ocr['backend'] ?? 'tesseract',
-            'language' => is_array($language) ? $language : explode('+', $language),
+        $native = [
+            'ocr' => [
+                'enabled' => (bool) ($ocr['enabled'] ?? true),
+                'backend' => $ocr['backend'] ?? 'tesseract',
+                'language' => is_array($language) ? $language : explode('+', $language),
+                'auto_rotate' => (bool) ($ocr['auto_rotate'] ?? true),
+            ],
+            'pdf_options' => [
+                'extract_tables' => (bool) ($cfg['extract_tables'] ?? true),
+                'extract_images' => (bool) ($cfg['extract_images'] ?? false),
+            ],
         ];
 
-        if (isset($ocr['auto_rotate'])) {
-            $vars['autoRotate'] = (bool) $ocr['auto_rotate'];
+        if ($cfg['extract_images'] ?? false) {
+            $native['images'] = (object) [];
         }
 
-        // ponytail: only the on_low_quality policy is constructible from the
-        // stubs; add 'always' when the extension exposes a factory for it.
+        if (!empty($cfg['llm']['model'])) {
+            $native['ocr']['vlm_config'] = array_filter([
+                'model' => $cfg['llm']['model'],
+                'api_key' => $cfg['llm']['api_key'] ?? null,
+                'base_url' => $cfg['llm']['base_url'] ?? null,
+            ]);
+        }
+
         if (($ocr['vlm_fallback'] ?? 'disabled') === 'on_low_quality') {
-            $vars['vlmFallback'] = VlmFallbackPolicy::onLowQuality(
-                (float) ($ocr['vlm_quality_threshold'] ?? 0.5)
-            );
+            $native['ocr']['vlm_fallback'] = [
+                'on_low_quality' => [
+                    'quality_threshold' => (float) ($ocr['vlm_quality_threshold'] ?? 0.5),
+                ],
+            ];
         }
 
-        if ($llm = $this->llmConfig()) {
-            $vars['vlmConfig'] = $llm;
-        }
-
-        return new OcrConfig(...$vars);
-    }
-
-    private function llmConfig(): ?LlmConfig
-    {
-        $llm = $this->config['llm'] ?? [];
-
-        if (empty($llm['model'])) {
-            return null;
-        }
-
-        return new LlmConfig(
-            model: $llm['model'],
-            apiKey: $llm['api_key'] ?? null,
-            baseUrl: $llm['base_url'] ?? null,
-        );
-    }
-
-    private function pdfConfig(array $cfg): PdfConfig
-    {
-        return new PdfConfig(...[
-            ...get_object_vars(PdfConfig::default()),
-            'extractTables' => (bool) ($cfg['extract_tables'] ?? true),
-            'extractImages' => (bool) ($cfg['extract_images'] ?? false),
-        ]);
+        return array_replace_recursive($native, $cfg['native'] ?? []);
     }
 
     protected function normalize(ExtractInput|string|SplFileInfo $input): ExtractInput
@@ -180,6 +162,6 @@ class XbergManager
     {
         $this->assertExtensionLoaded();
 
-        return XbergCore::$method(...$arguments);
+        return XbergApi::$method(...$arguments);
     }
 }

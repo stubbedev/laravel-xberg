@@ -34,12 +34,27 @@ class XbergFake
 
     public function extract(mixed $input, mixed $config = null): object
     {
-        return (object) ['results' => [$this->fakeResult($input)]];
+        return $this->fakeOutput([$this->fakeResult($input)]);
     }
 
     public function extractBatch(array $inputs, mixed $config = null): object
     {
-        return (object) ['results' => array_map($this->fakeResult(...), $inputs)];
+        return $this->fakeOutput(array_map($this->fakeResult(...), $inputs));
+    }
+
+    private function fakeOutput(array $results): object
+    {
+        return new class($results)
+        {
+            public function __construct(public readonly array $results)
+            {
+            }
+
+            public function getResults(): array
+            {
+                return $this->results;
+            }
+        };
     }
 
     public function text(mixed $input, mixed $config = null): string
@@ -68,13 +83,40 @@ class XbergFake
         $content = collect($this->stubs)
             ->first(fn (string $text, string $pattern) => Str::is($pattern, $name), 'Fake extracted content');
 
-        return (object) [
-            'content' => $content,
-            'mimeType' => 'text/plain',
-            'tables' => [],
-            'images' => [],
-            'metadata' => (object) ['title' => null, 'authors' => []],
-        ];
+        return new class($content)
+        {
+            public string $mimeType = 'text/plain';
+
+            public function __construct(public string $content)
+            {
+            }
+
+            public function getContent(): string
+            {
+                return $this->content;
+            }
+
+            public function getMimeType(): string
+            {
+                return $this->mimeType;
+            }
+
+            public function getTables(): array
+            {
+                return [];
+            }
+
+            public function getImages(): array
+            {
+                return [];
+            }
+
+            // getMetadata(), getChunks(), ... — empty defaults
+            public function __call(string $method, array $arguments): mixed
+            {
+                return null;
+            }
+        };
     }
 
     private function nameOf(mixed $input): string

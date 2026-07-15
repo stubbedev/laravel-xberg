@@ -38,7 +38,8 @@ class IntegrationTest extends TestCase
         $this->assertStringContainsString('hello from laravel-xberg', Xberg::text($path));
 
         $output = Xberg::extract($path);
-        $this->assertNotEmpty($output->results);
+        $this->assertNotEmpty($output->getResults());
+        $this->assertSame('text/plain', $output->getResults()[0]->mimeType);
 
         unlink($path);
     }
@@ -47,10 +48,11 @@ class IntegrationTest extends TestCase
     {
         $config = Xberg::config(['ocr' => ['language' => 'eng+deu'], 'extract_images' => true]);
 
-        $this->assertSame(['eng', 'deu'], $config->ocr->language);
-        $this->assertSame('tesseract', $config->ocr->backend);
-        $this->assertTrue($config->pdfOptions->extractImages);
-        $this->assertNotNull($config->images);
+        $this->assertSame(['eng', 'deu'], $config->getOcr()->getLanguage());
+        $this->assertSame('tesseract', $config->getOcr()->getBackend());
+        $this->assertTrue($config->getPdfOptions()->getExtractImages());
+        $this->assertTrue($config->getPdfOptions()->getExtractTables());
+        $this->assertNotNull($config->getImages());
     }
 
     public function test_backends_list(): void

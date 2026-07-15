@@ -52,16 +52,13 @@ $text = Xberg::text('document.pdf');
 
 // Full result — path or URL, uses the config defaults (tesseract etc.)
 $output = Xberg::extract('document.pdf');
-$result = $output->results[0];
+$result = $output->getResults()[0];         // \Xberg\ExtractedDocument
 
 echo $result->content;                      // extracted text
 echo $result->mimeType;                     // detected format
-echo $result->metadata->title;              // document metadata
-echo $result->metadata->pdf->page_count;
-
-foreach ($result->tables as $table) {       // when extract_tables is on
-    echo $table->markdown;
-}
+$result->getMetadata();                     // document metadata
+$result->getTables();                       // when extract_tables is on
+$result->getImages();                       // when extract_images is on
 
 // Batch — one result per input, same order
 $output = Xberg::extractBatch(['a.pdf', 'b.docx', 'scan.png']);
@@ -97,7 +94,13 @@ $output = Xberg::extract('scan.png', Xberg::config([
 ]));
 ```
 
-Everything not covered by the array keeps the extension's own defaults, so a hand-built `\Xberg\ExtractionConfig` still works anywhere a config is accepted.
+Everything not covered by the array keeps the extension's own defaults. Other native xberg options pass through under `native` using xberg's own snake_case schema:
+
+```php
+Xberg::config(['native' => ['chunking' => ['max_characters' => 2000]]]);
+```
+
+A hand-built `\Xberg\ExtractionConfig` still works anywhere a config is accepted.
 
 ### VLM providers
 
