@@ -36,7 +36,16 @@ jobs:
 
       - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr libheif1
 
-      - run: sudo pie install "xberg-io/xberg:^1.0.0-rc.29" || true
+      # Newest xberg release that actually ships a Linux PHP 8.4 binary: v1.3.7
+      # went out without any, and pie only resolves the newest tag, so a plain
+      # constraint breaks whenever upstream skips the Linux artifacts.
+      - name: Install ext-xberg
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh api 'repos/xberg-io/xberg/releases?per_page=30' --jq '[.[] | select(.prerelease | not) | select(any(.assets[].name; test("_php8\\.4-x86_64-linux-glibc-nts\\.tgz$")))][0].tag_name')
+          echo "installing xberg ${tag}"
+          sudo pie install "xberg-io/xberg:${tag#v}"
 
       - run: |
           php -dextension=xberg -r 'var_dump(extension_loaded("xberg"));'
